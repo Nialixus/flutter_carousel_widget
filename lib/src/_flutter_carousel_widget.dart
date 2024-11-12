@@ -204,48 +204,57 @@ class _FlutterCarouselState extends State<FlutterCarousel>
 
   /// Create a timer for auto-play functionality
   Timer? _getTimer() {
-    if (!widget.options.autoPlay) {
-      return null; // Return null if auto-play is disabled
-    }
-
-    // Periodic timer for auto-play
-    return Timer.periodic(widget.options.autoPlayInterval, (_) {
-      final route = ModalRoute.of(context);
-      if (route?.isCurrent == false) {
-        return; // Pause auto-play if the route is not active
+    try {
+      if (!widget.options.autoPlay) {
+        return null; // Return null if auto-play is disabled
       }
 
-      // Temporarily store the previous change reason
-      var previousReason = changeReasonMode;
-      // Set change reason to timed
-      _changeMode(CarouselPageChangedReason.timed);
+      // Periodic timer for auto-play
+      return Timer.periodic(widget.options.autoPlayInterval, (_) {
+        try {
+          final route = ModalRoute.of(context);
+          if (route?.isCurrent == false) {
+            return; // Pause auto-play if the route is not active
+          }
 
-      // Calculate the next page index for auto-play
-      var nextPage = widget.options.reverse
-          ? _carouselState!.pageController!.page!.round() - 1
-          : _carouselState!.pageController!.page!.round() + 1;
-      var itemCount = widget.itemCount ?? widget.items?.length ?? 0;
+          // Temporarily store the previous change reason
+          var previousReason = changeReasonMode;
+          // Set change reason to timed
+          _changeMode(CarouselPageChangedReason.timed);
 
-      // Reset to the first page if at the end of the carousel and infinite scroll is disabled
-      if (nextPage >= itemCount &&
-          widget.options.enableInfiniteScroll == false) {
-        if (widget.options.pauseAutoPlayInFiniteScroll) {
-          _clearTimer(); // Pause auto-play if configured
+          // Calculate the next page index for auto-play
+          var nextPage = widget.options.reverse
+              ? _carouselState!.pageController!.page!.round() - 1
+              : _carouselState!.pageController!.page!.round() + 1;
+          var itemCount = widget.itemCount ?? widget.items?.length ?? 0;
+
+          // Reset to the first page if at the end of the carousel and infinite scroll is disabled
+          if (nextPage >= itemCount &&
+              widget.options.enableInfiniteScroll == false) {
+            if (widget.options.pauseAutoPlayInFiniteScroll) {
+              _clearTimer(); // Pause auto-play if configured
+              return;
+            }
+            nextPage = 0; // Reset to the first page
+          }
+
+          // Animate to the next page and restore the previous change reason
+          _carouselState!.pageController!
+              .animateToPage(
+                nextPage,
+                duration: widget
+                    .options.autoPlayAnimationDuration, // Animation duration
+                curve: widget.options.autoPlayCurve, // Animation curve
+              )
+              .then((_) =>
+                  _changeMode(previousReason)); // Restore previous reason
+        } catch (_) {
           return;
         }
-        nextPage = 0; // Reset to the first page
-      }
-
-      // Animate to the next page and restore the previous change reason
-      _carouselState!.pageController!
-          .animateToPage(
-            nextPage,
-            duration:
-                widget.options.autoPlayAnimationDuration, // Animation duration
-            curve: widget.options.autoPlayCurve, // Animation curve
-          )
-          .then((_) => _changeMode(previousReason)); // Restore previous reason
-    });
+      });
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Clear the timer to stop auto-play
